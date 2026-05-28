@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@fontsource/cinzel/400.css";
+@import "@fontsource/cinzel/600.css";
+@import "@fontsource/eb-garamond/400.css";
+@import "@fontsource/eb-garamond/400-italic.css";
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background-color: #060810;
+  color: #e8dcc8;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #060810; }
+::-webkit-scrollbar-thumb { background: #39ff1433; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #39ff1466; }
+
+/* ── Background ── */
+.bg-siggy {
+  background-image: url("/background.png");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* ── Tome / scroll container ── */
+.tome {
+  background: linear-gradient(180deg, #06080fee 0%, #080d10ee 60%, #06080fee 100%);
+  border: 1px solid #39ff1422;
+  box-shadow:
+    0 0 60px #39ff1408,
+    0 0 0 1px #39ff1411,
+    inset 0 0 80px #00000066;
+}
+
+/* ── Siggy narration block ── */
+.siggy-block {
+  background: linear-gradient(135deg, #071a08 0%, #09200a 100%);
+  border-left: 2px solid #39ff1466;
+  border-top: 1px solid #39ff1422;
+  border-bottom: 1px solid #39ff1422;
+  border-right: 1px solid #39ff1411;
+  box-shadow: 0 0 20px #39ff1408, inset 0 0 30px #39ff1405;
+}
+
+/* ── User sentence block ── */
+.user-block {
+  background: linear-gradient(135deg, #0a0c18 0%, #0d1020 100%);
+  border-left: 2px solid #c9a84c55;
+  border: 1px solid #c9a84c22;
+}
+
+/* ── Input ── */
+.story-input {
+  background: #060810cc;
+  border: 1px solid #39ff1433;
+  color: #e8dcc8;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.story-input:focus {
+  outline: none;
+  border-color: #39ff1466;
+  box-shadow: 0 0 0 1px #39ff1422, 0 0 20px #39ff1411;
+}
+.story-input::placeholder { color: #9ca3af55; }
+
+/* ── Submit button ── */
+.submit-btn {
+  background: linear-gradient(135deg, #071a08, #0d2e0e);
+  border: 1px solid #39ff1466;
+  color: #39ff14;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.25s;
+  font-family: Cinzel, serif;
+  text-shadow: 0 0 10px #39ff1466;
+}
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d2e0e, #163d17);
+  border-color: #39ff14;
+  box-shadow: 0 0 20px #39ff1433;
+}
+.submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Gold divider ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c9a84c44, #39ff1433, #c9a84c44, transparent);
+  margin: 1rem 0;
+}
+
+/* ── Typewriter cursor ── */
+.tw-cursor::after {
+  content: "▊";
+  color: #39ff14;
+  animation: blink 0.9s step-end infinite;
+}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+/* ── Candle flicker ── */
+@keyframes flicker {
+  0%,100% { opacity:1; }
+  45% { opacity:0.8; }
+  50% { opacity:0.95; }
+  80% { opacity:0.85; }
+}
+.flicker { animation: flicker 2.8s ease-in-out infinite; }
+
+/* ── RainbowKit dark override ── */
+[data-rk] { --rk-colors-accentColor: #39ff14 !important; }

@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+build/
+artifacts/
+cache/
+coverage/
+.env
+.env.local
+contract/.env
+*.log
+.DS_Store
+Thumbs.db
+next-env.d.ts
+*.tsbuildinfo
