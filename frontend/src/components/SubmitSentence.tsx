@@ -18,7 +18,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   signing:   "Sign in Wallet…",
   waiting:   "Writing to Chain…",
   narrating: "Siggy is weaving…",
-  done:      "Written to Eternity ✦",
+  done:      "Written ✦",
   error:     "Try Again",
 };
 
@@ -28,16 +28,13 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [errMsg, setErrMsg] = useState("");
 
-  // Track what we're waiting on after tx confirms
   const pendingSentenceRef = useRef("");
   const pendingIndexRef = useRef(-1);
   const narrationFiredRef = useRef(false);
 
   const { writeContract, data: txHash, error: writeError } = useWriteContract();
-
   const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  // Fire narration once tx confirmed
   if (txConfirmed && !narrationFiredRef.current && pendingSentenceRef.current) {
     narrationFiredRef.current = true;
     fireNarration(pendingSentenceRef.current, pendingIndexRef.current);
@@ -45,8 +42,6 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
 
   async function fireNarration(submittedSentence: string, sentenceIndex: number) {
     setPhase("narrating");
-
-    // Pass only the last 5 sentences as context — not the full story
     const recentContext = entries.slice(-5).map((e) => ({
       sentence: e.sentence,
       contributor: e.contributor,
@@ -56,20 +51,13 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
       const res = await fetch("/api/narrate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          newSentence: submittedSentence,
-          contributor: address,
-          recentContext,
-        }),
+        body: JSON.stringify({ newSentence: submittedSentence, contributor: address, recentContext }),
       });
-
       const data = await res.json();
       if (!res.ok || !data.narration) throw new Error(data.error || "No narration");
 
-      // Show it live (typewriter)
       onNarrationReady(data.narration, sentenceIndex);
 
-      // Save to KV in background (fire-and-forget)
       fetch("/api/narrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +67,6 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
       setPhase("done");
     } catch (err) {
       console.error("Narration error:", err);
-      // Still mark done — the sentence is onchain even if Siggy stumbled
       setPhase("done");
     }
   }
@@ -91,7 +78,6 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
     narrationFiredRef.current = false;
 
     const trimmed = sentence.trim();
-    // The next entry will be at index = entries.length
     pendingSentenceRef.current = trimmed;
     pendingIndexRef.current = entries.length;
 
@@ -103,20 +89,16 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
         args: [trimmed],
       },
       {
-        onSuccess: () => {
-          setPhase("waiting");
-          setSentence("");
-        },
+        onSuccess: () => { setPhase("waiting"); setSentence(""); },
         onError: (err) => {
           const msg = err.message || "";
-          setErrMsg(msg.toLowerCase().includes("reject") ? "Transaction cancelled." : "Transaction failed. Try again.");
+          setErrMsg(msg.toLowerCase().includes("reject") ? "Cancelled." : "Failed. Try again.");
           setPhase("error");
         },
       }
     );
   }
 
-  // Also catch writeError from hook (user rejected before onError fires)
   if (writeError && phase === "signing") {
     setErrMsg("Transaction cancelled.");
     setPhase("error");
@@ -126,31 +108,29 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
   const canSubmit = isConnected && sentence.trim().length > 0 && !isLoading && phase !== "done";
 
   return (
-    <div className="tome rounded-sm p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-title text-xs tracking-[0.2em] uppercase text-siggy-green/70">
+    <div className="tome rounded-sm p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-title text-xs tracking-[0.15em] uppercase text-siggy-green/70">
           ✦ Add Your Sentence
         </span>
         {isConnected && address && (
-          <span className="font-mono text-mist/40 text-xs">
+          <span className="font-mono text-mist/40 text-[10px]">
             {address.slice(0, 6)}…{address.slice(-4)}
           </span>
         )}
       </div>
 
       {!isConnected ? (
-        <div className="text-center py-5">
+        <div className="text-center py-4">
           <p className="font-body italic text-mist/50 text-sm mb-1">
             Connect your wallet to write your sentence into eternity.
           </p>
-          <p className="font-body text-mist/30 text-xs">
-            Only Ritual Chain gas required — no tokens.
-          </p>
+          <p className="font-body text-mist/30 text-xs">Only Ritual Chain gas — no tokens.</p>
         </div>
       ) : (
         <>
           <textarea
-            className="story-input w-full rounded-sm px-4 py-3 font-body text-base resize-none"
+            className="story-input w-full rounded-sm px-3 py-2.5 font-body text-base resize-none"
             placeholder="Continue the tale… one sentence at a time."
             rows={3}
             value={sentence}
@@ -158,12 +138,13 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
             disabled={isLoading}
           />
 
-          <div className="flex items-center justify-between mt-3">
+          {/* Mobile: stacked layout; Desktop: side by side */}
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <span className={`text-xs font-mono ${sentence.length > 450 ? "text-red-400" : "text-mist/30"}`}>
               {sentence.length}/500
             </span>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-end gap-3">
               <AnimatePresence>
                 {phase === "error" && (
                   <motion.span
@@ -176,7 +157,7 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
               </AnimatePresence>
 
               <button
-                className={`submit-btn px-6 py-2.5 text-sm rounded-sm ${isLoading ? "animate-pulse" : ""}`}
+                className={`submit-btn flex-1 sm:flex-none px-4 py-2.5 text-xs sm:text-sm rounded-sm ${isLoading ? "animate-pulse" : ""}`}
                 onClick={phase === "error" ? () => setPhase("idle") : handleSubmit}
                 disabled={!canSubmit && phase !== "error"}
               >
@@ -189,28 +170,20 @@ export function SubmitSentence({ entries, onNarrationReady }: Props) {
 
       <AnimatePresence>
         {phase === "waiting" && (
-          <motion.p
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="mt-2 text-center text-siggy-green/50 text-xs font-body italic"
-          >
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="mt-2 text-center text-siggy-green/50 text-xs font-body italic">
             Your words travel through the blockchain… do not close this window.
           </motion.p>
         )}
         {phase === "narrating" && (
-          <motion.p
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="mt-2 text-center text-xs font-body italic flicker"
-            style={{ color: "#39ff14aa" }}
-          >
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="mt-2 text-center text-xs font-body italic flicker" style={{ color: "#39ff14aa" }}>
             🐱 Siggy stirs from slumber and reaches for a quill…
           </motion.p>
         )}
         {phase === "done" && (
-          <motion.p
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="mt-2 text-center font-title text-xs tracking-widest uppercase"
-            style={{ color: "#39ff14" }}
-          >
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="mt-2 text-center font-title text-xs tracking-widest uppercase" style={{ color: "#39ff14" }}>
             ✦ Your sentence is eternal ✦
           </motion.p>
         )}

@@ -22,7 +22,6 @@ function formatTime(ts: bigint) {
 export function StoryScroll() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Onchain sentences
   const { data: rawEntries, refetch } = useReadContract({
     address: LOREKEEPER_ADDRESS,
     abi: LOREKEEPER_ABI,
@@ -30,13 +29,9 @@ export function StoryScroll() {
   });
   const entries: StoryEntry[] = (rawEntries as StoryEntry[] | undefined) ?? [];
 
-  // Narrations from KV: { sentenceIndex → narration text }
   const [savedNarrations, setSavedNarrations] = useState<Record<number, string>>({});
-
-  // Live narration being typed right now (before it's in KV)
   const [liveNarration, setLiveNarration] = useState<{ text: string; afterIndex: number } | null>(null);
 
-  // Load saved narrations on mount
   useEffect(() => {
     fetch("/api/narrations")
       .then((r) => r.json())
@@ -44,25 +39,18 @@ export function StoryScroll() {
       .catch(console.error);
   }, []);
 
-  // When a new narration arrives from SubmitSentence:
-  //  - show it live as typewriter
-  //  - also add it to savedNarrations so it persists in this session
   const handleNarrationReady = useCallback((narration: string, afterIndex: number) => {
     setLiveNarration({ text: narration, afterIndex });
     setSavedNarrations((prev) => ({ ...prev, [afterIndex]: narration }));
-    // Refresh chain entries a moment later to pick up the new sentence
     setTimeout(() => refetch(), 2500);
   }, [refetch]);
 
-  // Scroll to bottom whenever entries or narrations change
   useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }, 120);
   }, [entries.length, Object.keys(savedNarrations).length, liveNarration]);
 
-  // Build interleaved display list:
-  // After each sentence at index N, show narration keyed to N (if it exists)
   const displayItems: DisplayItem[] = [];
   for (const entry of entries) {
     displayItems.push({ kind: "sentence", entry });
@@ -72,7 +60,6 @@ export function StoryScroll() {
     }
   }
 
-  // If a live narration exists for an index not yet in savedNarrations, append it
   if (
     liveNarration &&
     !savedNarrations[liveNarration.afterIndex] &&
@@ -84,48 +71,49 @@ export function StoryScroll() {
   const totalNarrations = Object.keys(savedNarrations).length;
 
   return (
-    <div className="flex gap-5 h-full">
+    <div className="flex flex-col lg:flex-row gap-4">
+
       {/* ── Main column ── */}
-      <div className="flex-1 flex flex-col min-w-0 gap-4">
+      <div className="flex-1 flex flex-col min-w-0 gap-3">
 
         {/* Title */}
-        <div className="text-center pt-4">
+        <div className="text-center pt-2">
           <div className="divider" />
           <h2
-            className="font-title text-2xl tracking-[0.3em] uppercase my-3"
+            className="font-title text-lg sm:text-2xl tracking-[0.15em] sm:tracking-[0.3em] uppercase my-2"
             style={{ color: "#39ff14", textShadow: "0 0 30px #39ff1455" }}
           >
             The Eternal Tale
           </h2>
-          <p className="text-mist/40 text-sm font-body italic">
+          <p className="text-mist/40 text-xs sm:text-sm font-body italic">
             Written by many hands · Narrated by one wizard cat
           </p>
           <div className="divider" />
         </div>
 
         {/* Story scroll */}
-        <div className="tome rounded-sm flex flex-col" style={{ minHeight: 0 }}>
+        <div className="tome rounded-sm">
           <div
             ref={scrollRef}
-            className="overflow-y-auto px-5 py-4 space-y-2 flex-1"
-            style={{ maxHeight: "calc(100vh - 360px)" }}
+            className="overflow-y-auto px-3 sm:px-5 py-3 space-y-2"
+            style={{ maxHeight: "calc(100svh - 320px)" }}
           >
             {displayItems.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-                className="text-center py-14"
+                className="text-center py-10"
               >
-                <p className="text-4xl mb-4 flicker">🐱</p>
-                <p className="font-title text-lg mb-2" style={{ color: "#39ff14aa" }}>
+                <p className="text-3xl mb-3 flicker">🐱</p>
+                <p className="font-title text-base mb-1.5" style={{ color: "#39ff14aa" }}>
                   The page is blank.
                 </p>
-                <p className="font-body italic text-mist/50 text-sm max-w-sm mx-auto">
-                  Siggy waits, tail curled, amber eyes gleaming in the dark. The first word has yet to be written. Will it be yours?
+                <p className="font-body italic text-mist/50 text-sm max-w-xs mx-auto px-2">
+                  Siggy waits, tail curled, amber eyes gleaming. The first word has yet to be written. Will it be yours?
                 </p>
               </motion.div>
             ) : (
               <AnimatePresence initial={false}>
-                {displayItems.map((item, i) => {
+                {displayItems.map((item) => {
                   if (item.kind === "sentence") {
                     return (
                       <motion.div
@@ -133,26 +121,24 @@ export function StoryScroll() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35 }}
-                        className="user-block rounded-sm px-5 py-3"
+                        className="user-block rounded-sm px-3 sm:px-5 py-2.5"
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-gold/60" />
-                            <span className="font-mono text-gold/70 text-xs">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-gold/60 shrink-0" />
+                            <span className="font-mono text-gold/70 text-[10px] sm:text-xs">
                               {shortAddr(item.entry.contributor)}
                             </span>
-                            <span className="text-mist/30 text-xs">co-author</span>
                           </div>
-                          <span className="text-mist/30 text-xs">{formatTime(item.entry.timestamp)}</span>
+                          <span className="text-mist/30 text-[10px] ml-auto">{formatTime(item.entry.timestamp)}</span>
                         </div>
-                        <p className="font-body text-parchment/80 text-base leading-relaxed pl-3">
+                        <p className="font-body text-parchment/80 text-sm sm:text-base leading-relaxed pl-2 sm:pl-3">
                           &ldquo;{item.entry.sentence}&rdquo;
                         </p>
                       </motion.div>
                     );
                   }
 
-                  // Narration block
                   const isLive =
                     liveNarration?.afterIndex === item.afterIndex &&
                     liveNarration?.text === item.text;
@@ -163,23 +149,20 @@ export function StoryScroll() {
                       initial={{ opacity: 0, y: 14 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5 }}
-                      className="siggy-block rounded-sm px-5 py-4"
+                      className="siggy-block rounded-sm px-3 sm:px-5 py-3 sm:py-4"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-base flicker">🐱</span>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-sm flicker">🐱</span>
                         <span
-                          className="font-title text-xs tracking-[0.2em] uppercase"
+                          className="font-title text-[10px] sm:text-xs tracking-[0.15em] uppercase"
                           style={{ color: "#39ff14", textShadow: "0 0 10px #39ff1466" }}
                         >
                           Siggy Narrates
                         </span>
                       </div>
-                      <p className="font-body italic text-parchment/85 text-lg leading-relaxed">
+                      <p className="font-body italic text-parchment/85 text-sm sm:text-base leading-relaxed">
                         {isLive ? (
-                          <TypewriterText
-                            text={item.text}
-                            onComplete={() => setLiveNarration(null)}
-                          />
+                          <TypewriterText text={item.text} onComplete={() => setLiveNarration(null)} />
                         ) : (
                           item.text
                         )}
@@ -195,10 +178,17 @@ export function StoryScroll() {
 
         {/* Submit */}
         <SubmitSentence entries={entries} onNarrationReady={handleNarrationReady} />
+
+        {/* Mobile sidebar (stats + collapsible authors) */}
+        <div className="lg:hidden">
+          <ContributorsSidebar entries={entries} totalNarrations={totalNarrations} />
+        </div>
       </div>
 
-      {/* ── Sidebar ── */}
-      <ContributorsSidebar entries={entries} totalNarrations={totalNarrations} />
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        <ContributorsSidebar entries={entries} totalNarrations={totalNarrations} />
+      </div>
     </div>
   );
 }
